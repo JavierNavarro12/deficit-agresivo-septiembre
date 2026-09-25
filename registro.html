@@ -1,0 +1,577 @@
+<title>Déficit de septiembre</title>
+<script>
+// ─── datos ────────────────────────────────────────────────────────────────
+// un objeto por día. campos opcionales: peso, kcal, prot, carbo, grasa, sal, entreno, nota.
+// parcial: true → el día aún no está cerrado (no entra en las medias).
+// pendiente: texto con lo que falta por registrar.
+const INICIO = { fecha: '2026-09-02', peso: 75.9 };
+const OBJETIVO = { kcalMin: 1750, kcalMax: 1800, prot: 160, grasaMin: 55, carbo: 155, ritmoMin: 0.45, ritmoMax: 0.70, semanas: 4 };
+
+const DIAS = [
+  { n: 1, fecha: '2026-09-01',
+    kcal: 1940, prot: 175, carbo: 177, grasa: 50, sal: 8,
+    entreno: 'sin gimnasio · 2 × 5 km corriendo (6\'26" y 6\'21"/km, fc 181–183) · 21.220 pasos',
+    nota: 'reparto mal hecho: desayuno y comida cortos de proteína, la cena tuvo que aportar ~90 g. sal alta.',
+    pendiente: 'peso' },
+  { n: 2, fecha: '2026-09-02', peso: 75.9,
+    kcal: 1885, prot: 176, carbo: 157, grasa: 61, sal: 7,
+    entreno: 'espalda y bíceps (dominadas, jalón, remo, 2 curls) · 20 min cinta 5 km/h inclinación 13 · 8.696 pasos',
+    nota: 'fc reposo 66 (rango fitbit 30 días 59–68, media 63; ayer 64), media diaria 78, máx 138 en la cinta. sueño 7 h 48 min, puntuación 84. desayuno: tostada entera de jamón con tomate, sin aceite (~420; el plan era media). comida: 200 g filete plancha de añojo Mercadona (ficha: 122 kcal, 23 g prot/100 g), 250 g patata, 2 huevos al vapor (~600). merienda: plátano (~105). post gym: batido 1 scoop (~115). cena: 200 g pechuga adobada BonChef (ficha: 130 kcal, 18,35 g prot, 1,5 g sal/100 g), 2 huevos al vapor, 25 g nueces (~570). postre: yogur proteico de chocolate (74, etiqueta). ternera y pollo reales, resto estimado. el pollo adobado lleva agua añadida: 37 g de proteína en vez de los 46 de pechuga limpia, y 3 g de sal.',
+    pendiente: 'marca del batido' },
+  { n: 3, fecha: '2026-09-03', peso: 75.7,
+    entreno: 'sin gimnasio · 7.251 pasos',
+    nota: 'agujetas fuertes de las carreras del martes. salida por la noche: comida sin registrar, no se estima.' },
+  { n: 4, fecha: '2026-09-04',
+    entreno: 'sin gimnasio · 9.523 pasos',
+    nota: 'fuera de casa, feria. comida de restaurante y alcohol, sin registrar.' },
+  { n: 5, fecha: '2026-09-05',
+    entreno: 'sin gimnasio · ~7.000 pasos',
+    nota: 'fuera de casa, feria. comida sin registrar.' },
+  { n: 6, fecha: '2026-09-06',
+    entreno: 'sin gimnasio · ~8.000 pasos',
+    nota: 'vuelta a casa. comida sin registrar.' },
+  { n: 7, fecha: '2026-09-07', peso: 76.3,
+    kcal: 1815, prot: 169, carbo: 163, grasa: 51, sal: 8,
+    entreno: 'espalda y bíceps (3 + 2 ejercicios) · cinta 5 km/h inclinación 15, ~2.800 pasos · 8.800 pasos en total',
+    pendiente: 'marca del batido',
+    nota: 'desayuno: tostada entera de jamón con tomate, sin aceite (~420, estimado). comida: 250 g patata, 2 huevos al vapor, pack 140 g tiras de pollo al horno Hacendado (150 kcal, 33 g prot, 2,5 g sal; ficha), yogur proteico (74, etiqueta) (~580). merienda: plátano. post gym: batido. cena: 2 latas atún al natural, 3 huevos al vapor, 100 g cottage, 15 g nueces, 30 g pan de cristal, medio bollo (ficha: 228 kcal/100 g) (~595). +600 g respecto al jueves tras tres días de alcohol, sal y carbos: agua y glucógeno, no grasa. no interpretar hasta el miércoles.' },
+  { n: 8, fecha: '2026-09-08', peso: 76.4,
+    kcal: 1818, prot: 161, carbo: 159, grasa: 56, sal: 6,
+    entreno: 'pierna: prensa, abductor, aductor, femoral, extensión de cuádriceps · 3.900 pasos',
+    nota: 'desayuno: tostada entera de jamón con tomate, sin aceite (~420, estimado). comida: hamburguesa de vaca madurada 180 g (ficha: 450 kcal, 31 g prot, 36 g grasa, 2 g sal), 250 g patata al micro, 2 tarrinas de queso fresco batido burgo de arias 144 g (ficha: 58 kcal, 11 g prot, 0 g grasa/100 g) (~745). merienda: plátano. post gym: batido. cena: 200 g pechuga limpia, 2 huevos al vapor, 30 g pan de cristal (~433). el peso no baja todavía: día de 8 g de sal ayer, el agua tarda 2–3 días en salir.' },
+  { n: 9, fecha: '2026-09-09', peso: 76.0,
+    kcal: 1754, prot: 164, carbo: 179, grasa: 47, sal: 4,
+    entreno: 'sin gimnasio · flexiones en casa: 4 series con pies elevados, 3 normales, 3 de fondos · 4.200 pasos',
+    pendiente: 'marca del batido',
+    nota: 'desayuno: tostada entera de jamón con tomate, sin aceite (~420, estimado). comida: 200 g de filete de pavo, 275 g de patata, ensalada de canónigos, cherry y zanahoria. merienda: plátano. cena: 150 g de solomillo de pollo a la plancha y 1 huevo (solo quedaba uno; se compensó con 25 g más de pollo y 5 g más de nueces). postre: bol de 150 g de queso fresco batido, 120 g de frutos rojos, 40 g de nueces y los 30 g de proteína en polvo. primer día salando con normalidad: el objetivo pasa de 3 a ~5 g de sal. −400 g respecto a ayer, el agua de la feria empieza a salir. sueño 7 h 8 min, puntuación 86, casi 2 h de rem. fc reposo 64, baja desde el 66. recuperación 63.' },
+  { n: 10, fecha: '2026-09-10', peso: 75.7,
+    kcal: 1783, prot: 168, carbo: 172, grasa: 49, sal: 5,
+    pendiente: 'marca del batido',
+    entreno: 'espalda y bíceps · 30 min cinta 5 km/h inclinación 13, ~3.200 pasos · 8.613 pasos en total',
+    nota: '−300 g respecto a ayer y vuelta a los 75,7 del día 3: el agua de la feria ha salido del todo, seis días después. desde hoy el peso ya se puede leer. desayuno: tostada entera de jamón con tomate. comida: 200 g de filete de pavo (se acabó el pollo), 250 g de patata cruda, ensalada. merienda: plátano. post gym: batido. cena: 2 latas de atún al natural y 3 huevos al vapor. postre: bol de 150 g de queso fresco batido, 120 g de frutos rojos y 30 g de nueces. cinta: fc media 134 y picos de 147, ~320 kcal por la ecuación del acsm, la mayor carga de la semana según fitbit. recuperación 53, baja desde el 63 del lunes. sueño 6 h 58 min, puntuación 85: el más corto de los cuatro registrados.' },
+  { n: 11, fecha: '2026-09-11', peso: 76.0,
+    kcal: 1798, prot: 169, carbo: 163, grasa: 58, sal: 5,
+    entreno: 'pecho interrumpido: 2 ejercicios y parada por dolor de hombro al final del segundo · 2.000 pasos en cinta inclinada · 3.560 pasos en total',
+    pendiente: 'marca del batido',
+    nota: 'cena ajustada: los lomos de salmón eran de 125 g y no de 150, se compensó con un huevo más a la plancha (+29 kcal, +1 g de proteína). dolor de hombro en el segundo ejercicio de pecho, paró en el momento; horas después no duele nada. aparece en la peor semana de recuperación: la técnica se degrada con la fatiga. +300 g tras un día de 1.783 kcal: no es grasa. dos días salando con normalidad tras una semana a 3 g, más el agua de reparación del entreno de ayer. teletrabajo: desayuno el bol de 50 g de avena Brüggen con 200 g de yogur de proteínas y 100 g de frutos rojos, el primero de los tres del finde. recuperación 42, tercer día bajando (63 → 53 → 42). hrv 70 ms sobre una media personal de 90, cuarto día cayendo (98 → 89 → 91 → 81 → 70), y fc en reposo subiendo (63 → 66). sueño 6 h 32 min, dormido a la 01:55: cuarta noche consecutiva bajando (7 h 48 → 7 h 08 → 6 h 58 → 6 h 32). cinco indicadores en la misma dirección: sesión de pecho corta, sin cinta, y el finde sin gimnasio. el sueño es la variable a corregir, no la dieta. báscula de cocina comprada, llega mañana.' },
+  { n: 12, fecha: '2026-09-12', peso: 75.3,
+    kcal: 1826, prot: 165, carbo: 146, grasa: 68, sal: 5,
+    entreno: 'reposo total · 384 pasos',
+    nota: 'peso más bajo del registro: −600 g desde los 75,9 del 2 de septiembre y −700 g respecto a ayer. pesado tras el primer tramo de 7 h, en las mismas condiciones que todos los anteriores: dato limpio. el suelo va bajando: 75,7 el día 10, 75,3 hoy. día de reposo absoluto, 384 pasos: el menos activo del registro, y el que más horas de sueño lleva. tras cinco indicadores de recuperación cayendo toda la semana, es exactamente lo que tocaba. matiz sobre esos cinco indicadores: no son cinco pruebas independientes sino una sola causa (la deuda de sueño) asomando por cinco sitios, y contarlos por separado infla la alarma. la disposición sigue en 42 después de 10 h de sueño y 384 pasos: el marcador arrastra una media, no mide el estado de hoy. el rhr de 66 está dentro del rango fitbit de 30 días (59-68). a partir de ahora se miran horas de sueño, rhr como media de 7 días y el rendimiento real en el gimnasio; la puntuación de disposición y la hrv de un solo día se ignoran. sueño 10 h 16 min en dos tramos (7 h + 3 h tras pesarse), puntuación 92: el rebote que pedían cuatro noches cortas seguidas. la recuperación sigue en 42 porque la fc en reposo está en 66, por encima de su media de 65. levantado tarde y sin desayunar: el bol de avena pasa a la merienda y el de queso con manzana al postre de la cena. comida tal cual (200 g de solomillo de pollo, 125 g de patata cruda, 1 bollo de pan de cristal, ensalada), primer día pesando todo con la báscula. merienda con 150 g de yogur en vez de 200, era lo que quedaba. cena tal cual: 2 latas de atún, 4 huevos, 35 g de nueces, ensalada. postre: 200 g de queso fresco batido con manzana y ~12 g de proteína en polvo. corrección importante de macros: el queso fresco batido Hacendado (8480000510716) es 46 kcal y 8 g de proteína por 100 g, no los 58 y 11 del burgo de arias del día 8 que venía usando; el yogur de proteínas (8480000209085) es 51 kcal y 10 g de proteína, y viene en pack de 4 × 120 g. el plan llevaba ~4,5 g de proteína de más al día: corregido subiendo el bol de 150 a 200 g.' },
+  { n: 13, fecha: '2026-09-13', peso: 74.6,
+    kcal: 1825, prot: 168, carbo: 127, grasa: 70, sal: 7,
+    entreno: 'sin gimnasio · segundo día de reposo',
+    nota: 'mínimo del registro: −1,3 kg desde el 2 de septiembre. la hrv rebota de 67 a 81 ms, primera subida en seis días (+21 %), y fitbit la marca dentro del intervalo; recuperación 42 → 52. queda confirmado que la caída era carga acumulada más deuda de sueño, no el déficit: dos noches largas (10 h 16 y 9 h 12, puntuación 88) y dos días de reposo lo han revertido. el rhr sigue en 66 porque responde más lento que la hrv. despertar a las 13:21: el horario pasa a ser el problema, no la recuperación. comida fuera de casa: 200 g de corvina (104 kcal y 17,8 g de proteína por 100 g, dato de base genérica, no de etiqueta), patata al horno sin pesar, 75 g de gamba cocida, un trozo de queso y otro de pan; patata, queso y pan van estimados con ±200 kcal de margen. merienda: bol completo de 50 g de avena, 150 g de queso batido, 100 g de frutos rojos y 15 g de nueces. cena: 240 g de ternera, 1 huevo (era el único que quedaba), 25 g de nueces y ensalada. postre: 150 g de queso batido con naranja; se acaba el bote. día alto de sal por la gamba cocida y el queso.' },
+  { n: 14, fecha: '2026-09-14', peso: 74.6,
+    kcal: 2030, prot: 173, carbo: 185, grasa: 67, sal: 9,
+    entreno: 'espalda y bíceps · 20 min cinta inclinada, ~2.000 pasos · ~8.000 pasos en total',
+    nota: 'segundo día seguido a 74,6: el peso aguanta pese a la sal alta de ayer, así que el 74,6 de ayer no era solo efecto del ayuno largo. vuelta al gimnasio con la sesión de pecho pendiente desde el día 11, la del dolor de hombro. día de compra: el queso fresco batido se acabó anoche. desayuno: tostada entera de bar, ~420 kcal. sueño 6 h 14 min, puntuación 67: el más corto desde el día 11, consecuencia directa de haberse levantado ayer a las 13:21. hrv 75 ms, baja desde los 81 del domingo pero muy por encima del suelo de 67 del viernes; recuperación 53. la serie confirma que en este registro la hrv sigue al sueño casi uno a uno: 6 h 32 → 70, 9 h 12 → 81, 6 h 14 → 75. comida del plan (200 g de vacuno, 250 g de patata, ensalada; no reportada, se asume). merienda: plátano. post gym: batido. cena fuera, platos compartidos: nestea 0, tapa de atún con maíz, zanahoria y cebolla, y picoteo de un tataki de ternera con canónigos y de un pollo a la brasa, más 2 gajos de patata (media patata pequeña); estimada en ~520 kcal (tapa ~130, tataki ~115, pollo ~200, patata ~70). postre del plan: 200 g de queso batido, 120 g de frutos rojos y 35 g de nueces. día ~230 kcal por encima del objetivo por la cena fuera; con la actividad del día, sigue siendo déficit. sal alta por el tataki y la comida de restaurante.' },
+  { n: 15, fecha: '2026-09-15', peso: 75.2,
+    kcal: 1814, prot: 170, carbo: 169, grasa: 53, sal: 7,
+    parcial: true,
+    entreno: 'pecho, hombro y tríceps: press inclinado, peck deck, press de hombro, 2 de tríceps con fondos · 7.200 pasos',
+    nota: '+600 g tras la cena fuera: sal del tataki, más hidratos (cada gramo de glucógeno retiene ~3 g de agua) y comida tardía aún en el intestino. no es grasa: 600 g de grasa exigirían ~4.600 kcal de superávit. media de los seis pesos desde que salió el agua de la feria (75,7 · 76,0 · 75,3 · 74,6 · 74,6 · 75,2): 75,2. los dos 74,6 eran el lado bajo del ruido (fin de semana bajo en hidratos y un ayuno largo), no un nuevo suelo. el aviso de subir calorías si el martes seguía por debajo de 74,8 queda descartado. sueño 6 h 50 min, puntuación 84; recuperación 43 con rhr 66. hrv 68 ms tras la cena fuera. corrección de la referencia de hrv: la gráfica de 30 días (18 ago–15 sept, rango 67–103) muestra que los valores de 98–103 fueron picos puntuales (18–20 ago y 7 sept) y que lo habitual, también antes del déficit, es 70–83. la «media personal de 90» usada el día 11 estaba inflada por esos picos: la referencia real ronda 76–78. 68 es la parte baja de lo normal, no un desplome. vigilar si sigue por debajo de 70 el miércoles y el jueves. desayuno: tostada entera de bar. comida del plan: 250 g de atún congelado, 250 g de patata cruda y ensalada, con un chorro de salsa de soja (~10-15 ml: ~10 kcal, pero 1,5-2 g de sal). segundo día seguido con sal alta. pre-gym: plátano. post gym: batido. cena: 125 g de salmón (los packs vienen de 125, no de 150) y 3 huevos. postre del plan tal cual. se entrenó pecho, hombro y tríceps en vez de pierna: la pierna pasa al miércoles. hombro: molestia en los dos al terminar el press de hombro por encima de la cabeza, cede al parar; los fondos posteriores, que también cargan el hombro, no dolieron. bilateral, transitoria y solo en el patrón de empuje al final de la sesión: apunta a técnica y fatiga, no a lesión. segundo episodio tras el del día 11, los dos empujando y al final. ya calienta siempre con gomas y le da prioridad al hombro, así que el calentamiento queda descartado como causa. el press de hombro fue en máquina, de recorrido fijo, y como tercer ejercicio de la sesión. plan para 2-3 semanas: fuera el press por encima de la cabeza, elevaciones laterales sin pasar de la altura del hombro, press con mancuernas en agarre neutro o landmine, y el hombro al principio de la sesión con 12-15 repeticiones. pendiente comprobar movilidad: levantar ambos brazos por encima de la cabeza sin peso, de pie y sin arquear. fisio si el dolor dura horas, aparece de noche, baja por el brazo o hay pérdida de fuerza.' },
+  { n: 16, fecha: '2026-09-16', peso: 75.4,
+    kcal: 1995, prot: 166, carbo: 185, grasa: 62, sal: 6,
+    entreno: 'pierna · 25 min de cinta inclinada · 8.000 pasos en total',
+    nota: '+200 g tras dos días seguidos de sal alta (tataki el lunes, salsa de soja el martes). la semana se ha quedado plana: del 10 al 16 de septiembre el peso va de 75,7 a 75,4, con media de 75,3 y un rango de 74,6 a 76,0. con la sal de estos dos días aún dentro, el dato limpio llega el jueves o el viernes; hasta entonces no se toca nada. comida fuera en un italiano: día compensado con media tostada, sin plátano, pizza prosciutto, cena de 250 g de pollo con 2 huevos y postre sin nueces. sueño 6 h 53 min, puntuación 86 con casi 2 h de rem; recuperación 53, igual que ayer. tercera noche seguida en torno a las 6 h 50: la calidad es buena pero la cantidad se queda corta entre semana. pierna por fin, ocho días después del día 8. desayuno: tostada entera de bar, no media como pedía el día compensado. comida en el italiano Boheme: pizza prosciutto entera (~1.000 kcal, ~48 g de proteína). sin plátano y sin batido. cena: 250 g de filete de pavo (no de pollo), 2 huevos y ensalada. postre: 200 g de yogur proteico en vez de queso batido (+10 kcal, +4 g de proteína) y 62 g de frutos rojos, lo que quedaba. tercer día seguido por encima del techo (2.030, 1.814 y 1.995), siempre por comer fuera; con pierna y 25 min de cinta el día sigue en déficit. jueves y viernes, plan estricto para que el peso del viernes sea legible.' },
+  { n: 17, fecha: '2026-09-17', peso: 75.8,
+    kcal: 1729, prot: 161, carbo: 165, grasa: 48, sal: 6,
+    entreno: 'espalda y bíceps: 2 remos, un jalón y uno de bíceps, subiendo peso en todos · sesión corta por falta de tiempo, sin cinta · 7.000 pasos',
+    nota: 'el peso se anotó de memoria: era 75,8 o 75,9, diferencia por debajo del ruido de la báscula. +400 g tras la pizza: 185 g de hidratos y sal, agua de glucógeno. hrv 103 ms, máximo de los últimos 30 días, dos días después de los 68 del martes; recuperación 99, la más alta del registro; sueño 7 h 36 min con puntuación 87, la noche más larga entre semana. ojo con sobreinterpretarlo: la noche anterior fueron 6 h 53 y esta 7 h 36, 45 minutos más no explican un salto de 35 ms, y además el miércoles fue el día de más carga (pierna y 25 min de cinta). la lectura buena es que el valor diario de hrv no dice casi nada por sí solo: el rango de 30 días va de 67 a 103 y los dos extremos se han tocado en cinco días. la media de los días 11 a 17 sale ~78, justo la referencia habitual. conclusión que sí se sostiene: no hay señal de que el déficit esté afectando a la recuperación. medias de 4 días: 75,40 (días 10-13) → 75,25 (días 14-17), unos 0,26 kg/semana, la mitad del objetivo. hoy espalda y bíceps (la última fue el lunes); el pecho al viernes, con mancuernas y sin press por encima de la cabeza. día a plan salvo la comida: 176 g de solomillo de pollo en vez de 200, 50 g de cherry en vez de 70 y sin zanahoria (no había), así que la comida quedó en ~415 kcal en lugar de 474. resto del día tal cual: plátano, batido, cena de 2 latas de atún con 3 huevos y el bol de postre. total 1.729 kcal y 161 g de proteína: 21 por debajo del suelo de 1.750, dentro del ruido, y la proteína por encima de 160, que es lo único innegociable. primer día estricto tras tres seguidos por encima del techo. entreno de espalda corto por falta de tiempo pero con subida de peso en los cuatro ejercicios, en plena segunda semana de déficit. es el dato que más pesa de cara al sábado: fuerza subiendo con el peso corporal plano no es estancamiento, es recomposición, y en ese caso no se recortan calorías.' },
+  { n: 18, fecha: '2026-09-18', peso: 75.4,
+    kcal: 1760, prot: 93, carbo: 130, grasa: 74, sal: 11,
+    entreno: 'sin gimnasio · salida nocturna, acostado a las 5:00',
+    nota: 'día fuera de plan desde la comida. desayuno a plan (avena, yogur proteico y frutos rojos, 344). después: 2 tapas (pinchito ~180 y 3 trozos pequeños de pescado frito ~170), 2 barceló con coca-cola zero (~270, el ron son ~135 por copa y el refresco cero) y un kebab de cena (~800). sin plátano, sin batido, sin la cena ni el postre del plan, sin gimnasio. total estimado ~1.760 kcal, dentro del techo por casualidad, pero con un margen amplio: comida de bar y de kebab, ±25 %. el problema real no son las calorías sino la proteína: ~93 g frente a los 160 del objetivo, el peor dato del bloque y el único que sí importa cuando se entrena en déficit. sal alta (~11) entre el pescado frito y el kebab. −400 g en un solo día estricto: los 400 g que subió el peso tras la pizza del miércoles eran agua de glucógeno y sal, como se dijo entonces, y han salido con un único día a plan. queda confirmado. la tendencia del bloque, en cambio, no acompaña: del día 2 (75,9) al 18 (75,4) son 500 g en 16 días, unos 0,22 kg por semana, la mitad baja del objetivo de 0,45-0,70. y la recta de los últimos nueve días (75,7 · 76,0 · 75,3 · 74,6 · 74,6 · 75,2 · 75,4 · 75,8 · 75,4) sale prácticamente plana, −0,12 kg por semana, con un rango de 1,4 kg que lo tapa todo. las medias de 4 días sin solapar dan 75,40 (días 10-13) y 75,25 (días 14-17). contrapeso: el jueves subió peso en los cuatro ejercicios de espalda, que es el argumento para no recortar calorías. sin el dato de cintura no se puede separar músculo de grasa y la decisión del sábado se queda coja. hrv 101 ms, segundo día seguido en lo más alto del rango de 30 días (103 el jueves, 101 hoy); recuperación 97 tras el 99 de ayer; sueño 7 h con puntuación 85 y 25 % de rem. dos días seguidos en el extremo alto ya no se explican como ruido de medición: es un cambio real de la media, no un pico suelto como los del 18-20 de agosto. y hoy se durmió media hora menos que ayer (7 h contra 7 h 36) con la hrv prácticamente igual, lo que descarta también la explicación del sueño. la lectura buena es simple: la recuperación está resuelta desde los dos días de reposo del 12 y 13, y el déficit no la está afectando. nuevo error de la app coach: propone aprovechar el pico de energía «para esa sesión de fuerza que ayer quedó más relajada», cuando el jueves se entrenó espalda subiendo peso en los cuatro ejercicios. la app mide minutos de pulso elevado (cardio semanal 193 de 315) y como no hubo cinta interpreta que no hubo entreno: no sabe distinguir una sesión de fuerza de un día sin entrenar. es la cuarta vez que da un dato mal en dos semanas. pulsaciones en reposo hoy 63, dentro del rango de 60-67 del último mes. la gráfica de 20 ago a 18 sept cuenta esto: arranque en ~61 antes del déficit, subida progresiva hasta un techo de 67 el 3-6 de septiembre (feria, arranque del déficit y carga acumulada), y bajada de los últimos cuatro días, 66 · 65 · 64 · 63. o sea, vuelta al punto de partida. junto con la hrv en 101-103 y la subida de peso en los cuatro ejercicios del jueves, la recuperación queda cerrada: no hay señal de que 1.750-1.800 kcal la estén afectando. quinto error de la app en la misma respuesta: afirma una «tendencia a la baja estadísticamente significativa» del último mes cuando su propia gráfica sube de ~61 a un pico de 67 y hoy sigue por encima del arranque; y vuelve a atribuirlo a «tu constancia con el running» cuando la última carrera fue el 1 de septiembre, hace 17 días. la única tendencia a la baja real es la de los últimos cuatro días.' },
+  { n: 19, fecha: '2026-09-19', peso: 75.1,
+    kcal: 2335, prot: 136, carbo: 195, grasa: 96, sal: 12,
+    entreno: 'pecho, hombro y tríceps · sesión corta de 50 min: 2 de pecho, 1 de hombro, 1 de tríceps · sábado, que en el plan era día sin gimnasio · 5.000 pasos',
+    pendiente: 'cintura',
+    nota: 'pesado a las 14:00 en vez de a las 8:00 por haberse acostado a las 5:00. corrección de una objeción mal planteada: el ayuno fue de 9 h 30 min (kebab a las 4:30, báscula a las 14:00), exactamente el mismo que en un día normal (cena a las 22:30, báscula a las 8:00). en ambos casos se pesa nada más levantarse, en ayunas y tras dormir, así que el protocolo fue idéntico y la hora del reloj no invalida nada. lo que sí queda como ruido no es la medición sino lo que se comió: el alcohol es diurético y deshidrata (empuja el peso hacia abajo) y la sal del kebab y del pescado frito retiene agua (lo empuja hacia arriba). se anulan en parte y la magnitud no se puede separar. con eso, 75,1 vale bastante más de lo que se dijo primero: es el valor más bajo desde el día 14 y cae dentro del umbral de «en objetivo» que se fijó (75,1-75,3). se confirma con la pesada del domingo a las 8:00 antes de tocar las calorías. recuperación 25, el valor más bajo del registro, por debajo incluso del 42 del día 11. aquí la app acierta: la causa es acostarse a las 5:00, unas 5 h más tarde de lo habitual, más el alcohol, que suprime la hrv toda la noche. no es fatiga acumulada ni tiene nada que ver con el déficit, porque la duración y la calidad del sueño fueron normales (7 h 12 min, puntuación 85). se resuelve solo con una noche a hora normal, igual que el bache del día 11. su recomendación de descanso total hoy es razonable, aunque el sábado ya era día sin gimnasio en el plan. comida real con dos cambios: 200 g de pavo en vez de pollo y 250 g de patata en vez de 125 g de patata más 60 g de pan de cristal. cuentas: el pavo son 245 kcal frente a 236 del pollo (+9) y los 125 g extra de patata (+97) no llegan a cubrir las ~145 del pan que se quita, así que la comida baja de 522 a 483. el día queda en ~1.769 en lugar de 1.808, dentro del techo de 1.750-1.800, y la proteína casi no se mueve: −1 g neto (el pavo suma 2, la patata 2 y el pan resta 5). segunda sesión de hombro desde el episodio del día 15, sin molestias: elevaciones laterales en máquina por debajo de la altura del hombro y sin subir peso, tal como se pautó. matiz que conviene no saltarse: esto confirma que la versión modificada se tolera, no que el hombro esté resuelto, porque el movimiento que dio el problema (press por encima de la cabeza) sigue sin probarse. reintroducirlo a partir del 29 de septiembre, 2 semanas después del día 15, y con mancuernas en agarre neutro antes que en máquina. el día se torció de la merienda en adelante. el bol de avena se tomó con 200 g de queso fresco batido en vez de yogur proteico (417 en lugar de 442, y 26 g de proteína en vez de 30). el bol de queso batido con manzana y la cena del plan no se llegaron a hacer: se cenó fuera, smash burger con dos raciones de patatas compartidas entre tres, unas con pulled pork y otras de trufa, más un barceló con coca-cola zero. estimación de la cena: hamburguesa ~800, el tercio de patatas ~500 y el ron ~135, total ~1.435. el día cierra en ~2.335 kcal frente al techo de 1.800, unas 535 de más, con un margen amplio porque es comida de restaurante (±25 %). la proteína sí se salvó, ~136 g, muy por encima de los 93 del viernes: la carne de la hamburguesa y el pulled pork aportaron lo que faltaba. segundo día seguido de salida y segunda madrugada seguida.' },
+  { n: 20, fecha: '2026-09-20', peso: 75.7,
+    kcal: 1635, prot: 167, carbo: 150, grasa: 63, sal: 8,
+    entreno: 'sin gimnasio',
+    pendiente: 'cintura',
+    nota: 'día limpio y con la proteína alta, el primero después del fin de semana. se levantó a las 14:00, así que todo el día cupo en dos tomas. comida: corvina con patatas al horno (~527 según lo pautado, no pesado) más 100 g de gamba cocida (99 kcal y 21 g de proteína). cena a las 21:15: 150 g de solomillo de pollo, 4 huevos al vapor, 25 g de nueces y ensalada, con 60 g de zanahoria añadidos (+21). bol a las 22:15: 50 g de avena, 200 g de yogur proteico y 100 g de frutos rojos, sin nueces. total ~1.635 kcal y ~167 g de proteína. quedan ~165 por debajo del suelo de 1.750, y a propósito: el sábado se pasó en 535, así que entre los dos días la cuenta sale casi a cero. el bol de las 22:15 queda confirmado, así que el total del día es firme. +600 g respecto a ayer, y la explicación es la de siempre: la smash burger y las patatas traen mucha sal y muchos hidratos, y cada gramo de glucógeno retiene unos 3 g de agua. no es grasa; 600 g de grasa exigirían un superávit de ~4.600 kcal y el día se pasó en ~535. tercer día seguido con el peso contaminado (viernes por el alcohol, sábado por la pesada a las 14:00, hoy por la sal), así que la decisión del bloque se aplaza otra vez. se fija fecha firme: martes 22 por la mañana, después de dos días limpios (domingo y lunes). sueño 10 h 46 min con puntuación 94, la mejor noche del registro, pero es rebote de la deuda del viernes, no una noche normal. recuperación 65, recuperada desde el 25 de ayer. el problema ahora no es la recuperación sino el horario: dos días seguidos acostándose de madrugada y despertando a las 14:00 dejan el reloj interno dado la vuelta, y el lunes de trabajo va a costar. aquí la app acierta otra vez al recomendar paseo suave y volver a anclar la rutina. 5.000 pasos el sábado.' },
+  { n: 21, fecha: '2026-09-21', peso: 75.3,
+    kcal: 1873, prot: 182, carbo: 152, grasa: 55, sal: 7,
+    entreno: 'espalda y bíceps: dominadas, un remo y un jalón, más curl martillo con mancuerna y curl con barra · 15 min de cinta inclinada (~175 kcal) · 8.200 pasos',
+    pendiente: 'cintura',
+    nota: 'desayuno: tostada entera de bar de jamón con tomate (420). comida con dos cambios sobre el plan: 250 g de solomillo de pollo en lugar de 200 g de filete de vacuno, y ensalada sin hoja verde, solo 70 g de cherry y 80 g de zanahoria. cuentas: 295 + 193 + 41 = 529 frente a las 498 previstas, +31, y la proteína de esa toma sube de 44 a 58 g. con el resto del día a plan saldría ~1.810 kcal y ~177 g de proteína, 10 por encima del techo. como no quedan frutos rojos, si el postre lleva manzana o naranja en su lugar el día baja solo a ~1.772 y se queda cuadrado sin tocar nada más. −400 g desde ayer. respuesta a la pregunta de si el dato es real o sigue inflado por la sal: las dos cosas a la vez, y más lo segundo. la sal y el glucógeno de la smash burger del sábado tardan entre dos y tres días en salir del todo, y ayer fue el primer día limpio, así que 75,3 todavía carga algo de agua. el valor de verdad sigue siendo el de mañana martes, tras dos días limpios seguidos. dicho eso, 75,3 cae justo dentro de la banda de en objetivo que se fijó (75,1-75,3), y dos de las tres últimas pesadas han caído ahí. sueño 5 h 55 min con puntuación 65, el más corto del registro: es el corte brusco de pasar de despertarse a las 14:00 el domingo a levantarse a las 8:00 hoy. bueno para reanclar el reloj, malo para el rendimiento de hoy. recuperación 88 y hrv 100 ms durmiendo menos de 6 h, lo que vuelve a confirmar que la hrv no sigue de forma directa la duración del sueño: es el tercer caso del registro. la app da luz verde y recomienda sesión de fuerza de tren superior, y esta vez acierta. se llegó a apuntar como sexto error suyo por asumir un día de pierna semanal fijo que no es el que sigue: la rotación real es espalda, pecho, pierna, espalda, pecho, con la pierna el miércoles. el jueves se hizo espalda y el sábado pecho, lo que cierra el ciclo, así que hoy vuelve a tocar espalda y la pierna cae el miércoles día 23. la cuenta de errores de la app se queda como estaba: este no lo era. dominadas: 5-6 series de 5 con 1:30 de descanso, sin llegar al fallo. se le recomendó subir a series de 6-7 y alargar el descanso a 2-3 min, y al pedir él las fuentes se comprobó que las dos recomendaciones estaban mal. el supuesto óptimo de 1-3 repeticiones en reserva es una simplificación de entrenadores, no un hallazgo: robinson y refalo et al. 2024 (sports medicine 54:2209-2231) encuentran una relación aproximadamente lineal sin meseta, y el metaanálisis de refalo et al. 2023 (sports medicine 53:649-665, 15 estudios) da un tamaño de efecto de 0,19 para fallo frente a no-fallo, es decir trivial; un eca de refalo 2024 con 26 entrenados no halló diferencia entre fallo y 1-2 rir. sobre el descanso, el metaanálisis bayesiano de 2024 (frontiers in sports and active living, 9 eca) no detecta diferencias apreciables por encima de 90 s, y 1:30 son exactamente 90 s. lo único con respaldo sólido es el volumen (schoenfeld, ogborn y krieger 2017; pelland y zourdos et al. 2026, sports medicine 56:481-505), con una referencia práctica de 10-20 series semanales por grupo muscular. su espalda son 11-12 series por sesión (5-6 de dominadas, 3 de remo, 3 de jalón) y dos sesiones por rotación, o sea 22-24 semanales, ya por encima del rango. conclusión: no se cambia nada del entrenamiento. si aparece estancamiento o fatiga acumulada, quitar primero una serie de remo o de jalón, nunca de dominadas. el test de dominadas al fallo cada 2-3 semanas se mantiene, pero como medición y no como entrenamiento: primero del día, en frío tras calentar, una sola serie. primero previsto el lunes 28. cena con dos cambios: 166 g de filete de pavo en lugar de 125 g de solomillo de pollo, lo que sube esa toma de 283 a 346 (+63) y su proteína de 42 a 53 g. postre del plan tal cual. el día cierra en ~1.873 kcal y ~182 g de proteína, 73 por encima del techo de 1.800, pero con 15 min de cinta inclinada y 8.200 pasos el gasto ronda las 2.700, así que el déficit del día sigue siendo de unas 830 kcal. la proteína, 182 g, es la más alta del registro y 2,4 g por kilo: viene bien después de los 93 g del día 18.' },
+  { n: 22, fecha: '2026-09-22', peso: 75.4,
+    kcal: 1723, prot: 162, carbo: 127, grasa: 55, sal: 8,
+    entreno: 'pecho, tríceps y hombro: press inclinado, press plano y cruces de poleas de arriba abajo, más uno de tríceps y uno de hombro · 20 min de cinta inclinada al final (~235 kcal) · 7.600 pasos',
+    pendiente: 'cintura',
+    nota: 'pesada de decisión del bloque, la primera limpia desde el viernes. veredicto: no se tocan las calorías. el número suelto (75,4) cae entre los dos umbrales que se fijaron (75,1-75,3 en objetivo, 75,5 o más ajustar), así que no decide nada por sí mismo; lo que decide es la recta. ajustando los pesos del día 7 al 22, dieciséis medidas desde que salió el agua de la feria, el ritmo real es −0,36 kg/semana, lo que implica un déficit de unas 400 kcal/día sobre una ingesta media de 1.851. queda por debajo del objetivo de 0,45-0,70, pero el déficit no se recorta, por cuatro razones. una: el desfase se explica entero por dos días concretos, el 14 (+230) y sobre todo el 19 (+535), los dos de comida fuera; los días a plan salen donde deben. dos: la fuerza sube (peso arriba en los cuatro ejercicios del día 17, dominadas de 1 a 8-9 en cuatro meses), así que parte de la grasa perdida la está tapando músculo ganado y la báscula subestima el avance. tres: quedan ocho días de bloque, hasta el 30 de septiembre, y recortar ahora casi no cambia el resultado. cuatro, y la más importante: come 1.800 y su metabolismo basal son 1.763, así que bajar más lo dejaría comiendo por debajo del basal, justo cuando entrena cinco días por semana y necesita 160 g de proteína. si se quiere acelerar, la palanca es la cinta inclinada, no la comida: 20 min suman ~235 kcal sin tocar la ingesta. añadirla a dos o tres sesiones más por semana sube el ritmo a ~0,45-0,50 sin recortar nada. sueño 7 h 21 min con puntuación 82 y 23 % de rem; recuperación 89. semana normal recuperada del todo tras las dos madrugadas del fin de semana: el reajuste de horario del lunes funcionó y solo costó una noche corta (5 h 55). la app vuelve a acertar al identificar hoy como día de empuje, que es justo lo que toca por la rotación; van tres aciertos seguidos. pero su recomendación de cargas altas ignora el hombro: pecho es exactamente el patrón que provocó los dos episodios (días 11 y 15), los dos empujando y al final de la sesión, y la carga alta es el factor de riesgo. se mantiene la pauta: nada por encima de la cabeza hasta el 29, agarre neutro con mancuernas o landmine, laterales sin pasar de la altura del hombro y 8-12 repeticiones en vez de series pesadas. resultado del hombro: sin molestias, y esta vez el dato vale. se hicieron dos empujes en lugar de uno (cambió el peck deck por press plano), así que el patrón que causó el episodio del día 11, que fue precisamente un press de pecho, se puso a prueba por partida doble y aguantó. es la primera prueba real desde entonces: la sesión del sábado no valía porque solo hubo elevaciones laterales, es decir, se evitó el movimiento problemático. de hombro, elevaciones laterales en máquina por debajo de la altura del hombro, dentro de la pauta. conclusión: el empuje horizontal (press plano e inclinado) queda despejado y puede entrenarse con normalidad. el empuje vertical por encima de la cabeza, que fue lo del día 15, sigue sin probarse y sigue retirado hasta el 29 de septiembre. refuerza la lectura inicial de que fue técnica y fatiga y no lesión: los dos episodios llegaron al final de la sesión y hoy los presses no dieron problema. el salmón de la cena se comió crudo con un poco de salsa de soja, no a la plancha con aceite. las calorías no cambian porque las 467 ya estaban calculadas sin aceite (125 g de salmón son 250 y 3 huevos 214), así que comerlo crudo evita las ~90 kcal del chorro que no estaba presupuestado. la soja sí añade sal, ~1,5-2 g, y eso sube la sal del día a ~9. el salmón venía congelado del pack, así que el anisakis queda descartado: la congelación previa es justo lo que exige la normativa española para comer pescado crudo. queda como norma: crudo solo si viene congelado de origen; si alguna vez se compra fresco de nevera, o se cocina o se congela antes unos 5 días a −18 °C en congelador doméstico.' },
+  { n: 23, fecha: '2026-09-23', peso: 75.3,
+    kcal: 1725, prot: 173, carbo: 158, grasa: 48, sal: 8,
+    entreno: 'pierna · 10 min de cinta inclinada (~120 kcal) · 6.100 pasos',
+    pendiente: 'cintura',
+    nota: 'matiz sobre la pesada: la cena de anoche llevó salsa de soja, así que 75,3 carga algo de agua por sal, probablemente 100-200 g. el dato real sería algo mejor, no peor. segundo día seguido de peso limpio, sin comida fuera detrás. la recta actualizada con los diecisiete pesos del día 7 al 23 da −0,33 kg/semana, o sea unas 364 kcal/día de déficit. conviene decirlo sin adornos: el ritmo ha ido bajando según se añaden datos (−0,42 con quince pesadas, −0,36 con dieciséis, −0,33 con diecisiete), lo que indica que la cifra alta de hace unos días estaba inflada por arrancar la serie justo en el pico de agua de la feria. el ritmo real del bloque está más cerca de 0,33 que de 0,42, y sigue por debajo del objetivo de 0,45-0,70. la decisión de ayer no cambia: no se recorta la comida, porque come 1.800 con un basal de 1.763, y la palanca es la cinta inclinada. sueño 6 h 19 min con puntuación 66, la segunda noche corta de tres; hrv 90 ms y recuperación 65, ambas normales. 34 min en llegar al sueño profundo. error de la app, este sí: recomienda sesión de tracción y dominadas, espalda y bíceps, cuando la espalda se hizo el lunes y el pecho el martes, así que por la rotación propia (espalda, pecho, pierna, espalda, pecho) hoy toca pierna. la última pierna fue el miércoles día 16, hace justo una semana. desayuno: tostada entera de bar (420). comida: 250 g de atún congelado en crudo, el paquete entero, con 250 g de patata y ensalada (470), aliñado con salsa de soja porque no había limón; tercer día seguido con algo de sal extra, así que la pesada de mañana puede llevar 100-200 g de agua. pre-gym plátano, post-gym batido. sin lechuga ni cherrys en todo el día porque no había (−17 kcal en la comida). cena del plan: 125 g de solomillo de pollo y 2 huevos. postre con 180 g de queso batido en lugar de 200 (−9 kcal, −1,6 g de proteína). total ~1.725 kcal y ~173 g de proteína.' },
+  { n: 24, fecha: '2026-09-24', peso: 75.1,
+    kcal: 2088, prot: 132, carbo: 263, grasa: 62, sal: 9,
+    entreno: 'espalda · 6.800 pasos',
+    pendiente: 'cintura',
+    nota: 'corrección importante sobre la tendencia. la recta del día 7 al 24 da −0,33 kg/semana, pero si se quitan los tres primeros días (76,3 · 76,4 · 76,0, todavía con agua de la feria) la recta del día 10 al 24 sale en −0,05, prácticamente plana. y las medias semanales lo confirman: días 11-17, 75,27; días 18-24, 75,33. el peso lleva dos semanas plano en torno a 75,3. el −0,42 y el −0,33 de días anteriores salían casi enteros de la bajada del agua de la feria, no de grasa. con una ingesta media de ~1.830 y cinco días de gimnasio, un gasto real de ~1.850 no es creíble (el basal solo son 1.763), así que el peso plano tiene que venir de alguna combinación de recomposición (fuerza subiendo, vuelta al gimnasio hace cuatro meses tras años parado), agua y glucógeno, y calorías de comidas fuera infraestimadas. los datos disponibles no permiten separar esas tres cosas; la cintura sí, y sigue sin medirse. también se corrige un argumento de días anteriores: se dijo que no convenía bajar calorías porque se quedaría por debajo del basal. ese umbral no tiene base fisiológica; lo que importa es el tamaño del déficit respecto al gasto total y la proteína, no si la ingesta pasa por debajo del basal. decisión: nada cambia en los seis días que quedan de bloque; el 30 se cierra con cintura, fotos, el test de dominadas del lunes 28 y la media semanal, y con eso se decide la fase siguiente. sueño 6 h 33 min con puntuación 80 y 1 h 44 min de rem; hrv 96 ms y recuperación 73. la app acierta: hoy toca espalda por la rotación. comidas: desayuno, plátano y batido a plan; comida con 200 g de filete de vacuno en lugar de pollo (498 en vez de 474). cena fuera de plan: un plato pequeño de macarrones carbonara con nata (~250 g, ~450 kcal y ~15 g de proteína) y 2 trozos de pizza de jamón y queso (~500 kcal y ~22 g), en lugar de las 2 latas de atún con 3 huevos. sin el bol de postre. total ~2.088 kcal y ~132 g de proteína, unas 288 por encima del techo, con margen de ±25 % en la cena. la proteína se queda 28 g corta del objetivo de 160: la cena fuera tenía menos que el atún con huevos y además faltó el postre. hidratos altos (~275 g) y sal alta, así que la pesada del día 25 llevará agua y glucógeno y no cuenta para la tendencia.' },
+  { n: 25, fecha: '2026-09-25', peso: 75.4,
+    kcal: null,
+    pendiente: 'cintura',
+    nota: '75,4 en ayunas tras la cena de pasta y pizza: solo 0,3 por encima de ayer, poco para una noche con ~260 g de hidratos y sal alta. media de los días 19-25, 75,33, igual que la semana anterior. hoy toca pecho por la rotación.' },
+];
+
+// plan semanal fijo. cada línea lleva las cantidades escritas, sin abreviar.
+const PLAN = [
+  { dia: 'lunes', entreno: 'pecho, hombro y tríceps', comidas: [
+      ['desayuno', 'tostada entera de bar: ~110 g de pan, 45 g de jamón sin grasa, tomate rallado cargado, sin aceite', 420],
+      ['comida', '200 g de filete de vacuno · 250 g de patata cruda · ensalada de 25 g de hoja verde, 70 g de cherry y 80 g de zanahoria', 498],
+      ['pregym', '1 plátano', 105],
+      ['post gym', 'batido de 30 g de proteína con agua', 115],
+      ['cena', '125 g de solomillo de pollo · 2 huevos al vapor', 283],
+      ['postre', 'bol de 200 g de queso fresco batido con 120 g de frutos rojos y 35 g de nueces (7 enteras)', 358]],
+    total: { kcal: 1779, prot: 163, carbo: 173, grasa: 52, fibra: 27 } },
+  { dia: 'martes', entreno: 'espalda y bíceps', comidas: [
+      ['desayuno', 'tostada entera de bar: ~110 g de pan, 45 g de jamón sin grasa, tomate rallado cargado, sin aceite', 420],
+      ['comida', '250 g de atún congelado, el paquete entero · 250 g de patata cruda · ensalada de 25 g de hoja verde, 70 g de cherry y 80 g de zanahoria', 470],
+      ['pregym', '1 plátano', 105],
+      ['post gym', 'batido de 30 g de proteína con agua', 115],
+      ['cena', '125 g de salmón, un lomo del pack · 3 huevos al vapor', 467],
+      ['postre', 'bol de 200 g de queso fresco batido con 120 g de frutos rojos y 15 g de nueces (3 enteras)', 227]],
+    total: { kcal: 1804, prot: 169, carbo: 169, grasa: 53, fibra: 26 } },
+  { dia: 'miércoles', entreno: 'pierna', comidas: [
+      ['desayuno', 'tostada entera de bar: ~110 g de pan, 45 g de jamón sin grasa, tomate rallado cargado, sin aceite', 420],
+      ['comida', '200 g de filete de pavo · 250 g de patata cruda · ensalada de 25 g de hoja verde, 70 g de cherry y 80 g de zanahoria', 472],
+      ['pregym', '1 plátano', 105],
+      ['post gym', 'batido de 30 g de proteína con agua', 115],
+      ['cena', '125 g de solomillo de pollo · 2 huevos al vapor', 283],
+      ['postre', 'bol de 200 g de queso fresco batido con 120 g de frutos rojos y 35 g de nueces (7 enteras)', 358]],
+    total: { kcal: 1753, prot: 163, carbo: 175, grasa: 48, fibra: 28 } },
+  { dia: 'jueves', entreno: 'pecho, hombro y tríceps', comidas: [
+      ['desayuno', 'tostada entera de bar: ~110 g de pan, 45 g de jamón sin grasa, tomate rallado cargado, sin aceite', 420],
+      ['comida', '200 g de solomillo de pollo · 250 g de patata cruda · ensalada de 25 g de hoja verde, 70 g de cherry y 80 g de zanahoria', 474],
+      ['pregym', '1 plátano', 105],
+      ['post gym', 'batido de 30 g de proteína con agua', 115],
+      ['cena', '2 latas de atún al natural, ~120 g escurrido · 3 huevos al vapor', 349],
+      ['postre', 'bol de 200 g de queso fresco batido con 120 g de frutos rojos y 30 g de nueces (6 enteras)', 325]],
+    total: { kcal: 1788, prot: 167, carbo: 172, grasa: 49, fibra: 27 } },
+  { dia: 'viernes', entreno: 'espalda y bíceps · teletrabajo', comidas: [
+      ['desayuno', 'bol de 50 g de copos de avena con 200 g de yogur de proteínas y 100 g de frutos rojos', 344],
+      ['comida', '200 g de filete de pavo · 250 g de patata cruda · ensalada de 25 g de hoja verde, 70 g de cherry y 80 g de zanahoria', 483],
+      ['pregym', '1 plátano', 105],
+      ['post gym', 'batido de 30 g de proteína con agua', 115],
+      ['cena', '125 g de salmón, un lomo del pack · 3 huevos al vapor', 467],
+      ['postre', 'bol de 200 g de queso fresco batido con 120 g de frutos rojos y 25 g de nueces (5 enteras)', 292]],
+    total: { kcal: 1806, prot: 168, carbo: 163, grasa: 58, fibra: 28 } },
+  { dia: 'sábado', entreno: 'sin gimnasio', comidas: [
+      ['desayuno', 'bol de 50 g de copos de avena con 200 g de yogur de proteínas, 100 g de frutos rojos y 15 g de nueces (3 enteras)', 442],
+      ['comida', '200 g de solomillo de pollo · 125 g de patata cruda · 60 g de pan de cristal, 1 bollo · ensalada de 25 g de hoja verde, 70 g de cherry y 80 g de zanahoria', 522],
+      ['merienda', 'bol de 200 g de queso fresco batido con 1 manzana troceada', 154],
+      ['cena', '2 latas de atún al natural, ~120 g escurrido · 4 huevos al vapor · 35 g de nueces (7 enteras) · ensalada de 25 g de hoja verde y 70 g de cherry', 690]],
+    total: { kcal: 1808, prot: 161, carbo: 145, grasa: 67, fibra: 31 } },
+  { dia: 'domingo', entreno: 'sin gimnasio', comidas: [
+      ['desayuno', 'bol de 50 g de copos de avena con 200 g de yogur de proteínas, 100 g de frutos rojos y 15 g de nueces (3 enteras)', 442],
+      ['comida', '200 g de filete de vacuno · 125 g de patata cruda · 60 g de pan de cristal, 1 bollo · ensalada de 25 g de hoja verde, 70 g de cherry y 80 g de zanahoria', 535],
+      ['merienda', 'bol de 200 g de queso fresco batido con 1 naranja troceada', 154],
+      ['cena', '150 g de solomillo de pollo · 4 huevos al vapor · 25 g de nueces (5 enteras) · ensalada de 25 g de hoja verde y 70 g de cherry', 658]],
+    total: { kcal: 1789, prot: 161, carbo: 145, grasa: 64, fibra: 30 } },
+];
+
+// lista de la compra semanal. ean y ficha verificados en open food facts el 9 de septiembre de 2026.
+// el id de cada producto es la clave con la que se guarda el check; no cambiarlo al editar el nombre.
+const COMPRA = [
+  { grupo: 'carne y pescado', items: [
+    { id: 'vacuno', nom: 'Filete de vacuno 1ª, el de 122 kcal y 23 g de proteína', cant: '400 g', ean: '2302711004864', url: 'https://es.openfoodfacts.org/producto/2302711004864/filete-de-vacuno-1a-mercadona' , eur: 8.40 },
+    { id: 'pavo', nom: 'Filete de pechuga de pavo Hacendado', cant: '400 g', ean: '2302794004119', url: 'https://es.openfoodfacts.org/producto/2302794004119/filete-de-pechuga-de-pavo-hacendado' , eur: 3.20 },
+    { id: 'pollo', nom: 'Solomillo de pollo Mercadona, bandeja. no el empanado', cant: '800 g', ean: '2302786002260', url: 'https://es.openfoodfacts.org/producto/2302786002260/solomillo-de-pollo-mercadona' , eur: 6.52 },
+    { id: 'atuncong', nom: 'Rodajas de atún de aleta amarilla Hacendado, congelado. el de 82 kcal y 19,9 g de proteína', cant: '1 paquete de 250 g', ean: '2324357003063', url: 'https://es.openfoodfacts.org/producto/2324357003063/atun-congelado-hacendado' , eur: 4.38 },
+    { id: 'salmon', nom: 'Lomos de salmón sin piel y sin espinas Hacendado, congelado. paquete de 2 lomos, ~250 g', cant: '1 paquete', ean: '', url: 'https://tienda.mercadona.es/product/24511/lomos-salmon-sin-piel-sin-espinas-hacendado-congelado-paquete' , eur: 5.95 },
+    { id: 'atun', nom: 'Atún claro al natural Hacendado, pack de 6 latas de 80 g', cant: '1 pack, dura semana y media', ean: '8480000233820', url: 'https://tienda.mercadona.es/product/18018/atun-claro-natural-hacendado' , eur: 2.80 }] },
+  { grupo: 'lácteos y huevos', items: [
+    { id: 'huevos', nom: 'Huevos', cant: '2 docenas', ean: '', url: '' , eur: 4.99 },
+    { id: 'quesobatido', nom: 'Queso fresco batido desnatado Hacendado, tarrina de 500 g. 46 kcal y 8 g de proteína por 100 g', cant: '3 tarrinas', ean: '8480000510716', url: 'https://es.openfoodfacts.org/producto/8480000510716/queso-fresco-batido-desnatado-hacendado' , eur: 3.30 },
+    { id: 'yogur', nom: 'Yogur proteínas natural 0% Hacendado, pack de 4 × 120 g. 51 kcal y 10 g de proteína por 100 g', cant: '2 packs, dan para semana y media', ean: '8480000209085', url: 'https://es.openfoodfacts.org/producto/8480000209085/yogur-proteinas-natural-0-hacendado' , eur: 1.40 }] },
+  { grupo: 'fruta y verdura', items: [
+    { id: 'canonigos', nom: 'Canónigos Hacendado, bolsa de 125 g', cant: '2 bolsas', ean: '8437004621139', url: 'https://es.openfoodfacts.org/producto/8437004621139/canonigos-lavados-hacendado' , eur: 2.36 },
+    { id: 'cherry', nom: 'Tomates cherry, bandeja de 500 g', cant: '1 bandeja', ean: '', url: 'https://tienda.mercadona.es/product/69990/tomates-cherry-bandeja' , eur: 1.95 },
+    { id: 'zanahoria', nom: 'Zanahoria baby Hacendado, bolsa de 450 g. si no la hay, palitos de zanahoria en tarrina de 180 g, 2 tarrinas', cant: '1 bolsa', ean: '8480000612663', url: 'https://es.openfoodfacts.org/producto/8480000612663/zanahoria-baby-hacendado' , eur: 0.85 },
+    { id: 'patata', nom: 'Patatas pequeñas de guarnición, bolsa de 1 kg (4 raciones de 250 g)', cant: '2 bolsas, dan para semana y media', ean: '', url: '' , eur: 3.84 },
+    { id: 'platano', nom: 'Plátanos', cant: '5', ean: '', url: '' , eur: 1.38 },
+    { id: 'fruta', nom: 'Manzana y naranja', cant: '1 de cada', ean: '', url: '' , eur: 0.74 },
+    { id: 'frutosrojos', nom: 'Mix de frutos rojos congelados Hacendado, bolsa de 300 g. 40 kcal, 6,4 g de hidratos (6,1 de azúcares) y 0,9 g de proteína por 100 g', cant: '3 bolsas', ean: '8480000610898', url: 'https://es.openfoodfacts.org/producto/8480000610898/mix-frutos-rojos-hacendado' , eur: 5.70 }] },
+  { grupo: 'despensa', items: [
+    { id: 'avena', nom: 'Copos de avena extra suaves Brüggen, caja de 800 g. 375 kcal, 14 g de proteína, 10 g de fibra y 0,7 g de azúcar por 100 g', cant: '1 cada 5 semanas', ean: '4008713713411', url: 'https://es.openfoodfacts.org/producto/4008713713411/copos-de-avena-extra-suaves-bruggen' , eur: 0.24 },
+    { id: 'nueces', nom: 'Nuez natural pelada Hacendado, bolsa de 200 g', cant: '1 bolsa', ean: '8480000340245', url: 'https://es.openfoodfacts.org/producto/8480000340245/nuez-natural-pelada-hacendado' , eur: 2.50 },
+    { id: 'pan', nom: 'Pan de cristal Europastry, 4 bollos de 60 g', cant: '1 cada 2 semanas', ean: '8424465903739', url: '' , eur: 0.95 },
+    { id: 'aceite', nom: 'Aceite de oliva virgen extra en spray Hacendado, 200 ml', cant: '1 al mes', ean: '8480000047182', url: 'https://es.openfoodfacts.org/producto/8480000047182/aceite-de-oliva-virgen-extra-hacendado' , eur: 0.33 }] },
+];
+</script>
+
+<style>
+  :root {
+    --fondo: #E7EAE2; --tarjeta: #FBFCF8; --tinta: #171A17; --sec: #6C7369; --linea: #D0D5C8;
+    --azul: #2C4A6E; --verde: #4A6B3C; --rojo: #9E3B1D; --ocre: #96700F;
+    --serif: Georgia, 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--tinta); font: 15px/1.45 var(--sans); }
+  main { max-width: 1240px; margin: 0 auto; padding: 20px 14px 48px; display: flex; flex-direction: column; gap: 14px; }
+  .num { font-family: var(--serif); font-variant-numeric: tabular-nums; }
+  .card { background: var(--tarjeta); border: 1px solid var(--linea); border-radius: 3px; padding: 16px; }
+  .sec { color: var(--sec); }
+  .small { font-size: 13px; }
+
+  header .peso { font-family: var(--serif); font-size: 64px; line-height: 1; letter-spacing: -0.02em; }
+  header .peso small { font-size: 22px; letter-spacing: 0; color: var(--sec); margin-left: 4px; }
+  header .fila { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 10px; align-items: baseline; }
+  header .dif { font-size: 20px; }
+  header .fecha { font-size: 13px; color: var(--sec); margin-bottom: 6px; }
+  header .ritmo { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--linea); font-size: 14px; }
+
+  .grafica h2, .lista h2 { font-size: 13px; font-weight: 500; color: var(--sec); margin: 0 0 10px; }
+  #chart canvas { width: 100%; height: auto; display: block; }
+  .leyenda { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; color: var(--sec); flex-wrap: wrap; }
+  .leyenda span::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: -1px; border-radius: 2px; }
+  .leyenda .b::before { background: var(--verde); opacity: .18; outline: 1px solid var(--verde); outline-offset: -1px; }
+  .leyenda .p::before { background: var(--azul); border-radius: 50%; }
+  #tip { position: absolute; pointer-events: none; background: var(--tinta); color: var(--tarjeta); font-size: 12px; padding: 4px 8px; border-radius: 3px; white-space: nowrap; transform: translate(-50%, -130%); }
+  .wrap { position: relative; }
+
+  .cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .cifras .card { padding: 12px 14px; }
+  .cifras .v { font-family: var(--serif); font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .cifras .v small { font-size: 13px; font-family: var(--sans); color: var(--sec); margin-left: 2px; }
+  .cifras .l { font-size: 12px; color: var(--sec); margin-top: 4px; }
+
+  .lista { padding: 0; }
+  .lista h2 { padding: 14px 16px 0; }
+  .dia { display: grid; grid-template-columns: 28px 1fr; gap: 0 10px; padding: 12px 16px; border-top: 1px solid var(--linea); }
+  .dia .n { font-family: var(--serif); font-size: 18px; color: var(--sec); line-height: 1.2; }
+  .dia .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .dia .f { font-weight: 500; }
+  .dia .pk { font-family: var(--serif); font-size: 18px; font-variant-numeric: tabular-nums; }
+  .dia .macros { display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+  .dia .macros b { font-family: var(--serif); font-weight: 400; font-size: 17px; }
+  .dia .macros span { font-size: 12px; color: var(--sec); }
+  .dia .macros .m { display: flex; flex-direction: column; line-height: 1.2; }
+  .dia .ent, .dia .nota { font-size: 13px; margin-top: 6px; }
+  .dia .ent::before { content: 'entreno · '; color: var(--sec); }
+  .dia .nota { color: var(--sec); }
+  .dia .falta { font-size: 12px; color: var(--ocre); margin-top: 6px; }
+  .ok { color: var(--verde); } .mal { color: var(--rojo); } .pend { color: var(--ocre); }
+  .pill { display: inline-block; font-size: 11px; padding: 1px 6px; border: 1px solid currentColor; border-radius: 3px; margin-left: 6px; vertical-align: 1px; }
+  .nota-medias { font-size: 12px; color: var(--sec); }
+
+  .plan { padding: 0; }
+  .plan h2 { padding: 14px 16px 0; }
+  .plan .intro { font-size: 12px; color: var(--sec); padding: 0 16px 12px; }
+  .dplan { border-top: 1px solid var(--linea); padding: 12px 16px; }
+  .dplan .cab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .dplan .nom { font-weight: 500; }
+  .dplan .ent { font-size: 12px; color: var(--sec); }
+  .dplan table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .dplan td { padding: 3px 0; vertical-align: top; }
+  .dplan td.et { color: var(--sec); font-size: 12px; width: 72px; padding-right: 8px; }
+  .dplan td.k { text-align: right; font-family: var(--serif); font-variant-numeric: tabular-nums; color: var(--sec); white-space: nowrap; padding-left: 10px; }
+  .dplan .tot { display: flex; gap: 14px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--linea); flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+  .dplan .tot .m { display: flex; flex-direction: column; line-height: 1.2; }
+  .dplan .tot b { font-family: var(--serif); font-weight: 400; font-size: 16px; }
+  .dplan .tot span { font-size: 11px; color: var(--sec); }
+
+  .compra { padding: 0; }
+  .compra h2 { padding: 14px 16px 0; }
+  .compra .intro { font-size: 12px; color: var(--sec); padding: 0 16px 4px; }
+  .grupo { border-top: 1px solid var(--linea); padding: 12px 16px; }
+  .grupo h3 { font-size: 12px; font-weight: 500; color: var(--sec); margin: 0 0 8px; letter-spacing: .04em; }
+  .grupo ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .grupo li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; }
+  .grupo .cant { font-family: var(--serif); font-variant-numeric: tabular-nums; color: var(--sec); white-space: nowrap; }
+  .grupo .ean { display: block; font-size: 11px; color: var(--sec); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .grupo a { color: var(--azul); text-decoration: none; border-bottom: 1px solid currentColor; }
+  .grupo a:focus-visible { outline: 2px solid var(--azul); outline-offset: 2px; }
+  .avisos { border-top: 1px solid var(--linea); padding: 12px 16px; font-size: 12px; color: var(--sec); }
+  .avisos ul { margin: 6px 0 0; padding-left: 16px; display: flex; flex-direction: column; gap: 4px; }
+  .grupo li { align-items: flex-start; }
+  .grupo input[type="checkbox"] { width: 18px; height: 18px; flex: none; margin: 1px 0 0; accent-color: var(--verde); cursor: pointer; }
+  .grupo .txt { flex: 1; }
+  .grupo li.tengo .txt { color: var(--sec); text-decoration: line-through; text-decoration-color: var(--linea); }
+  .grupo li.tengo .txt a { color: var(--sec); }
+  .grupo li.tengo .cant { color: var(--linea); }
+  .contador { padding: 0 16px 12px; font-size: 12px; color: var(--sec); }
+  .contador b { font-family: var(--serif); font-weight: 400; font-size: 15px; color: var(--tinta); }
+  .grupo .der { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+  .grupo .eur { font-family: var(--serif); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--sec); }
+  .grupo li.tengo .eur { color: var(--linea); }
+  .totales { border-top: 1px solid var(--linea); padding: 12px 16px; display: flex; gap: 20px; flex-wrap: wrap; }
+  .totales .m { display: flex; flex-direction: column; line-height: 1.2; }
+  .totales b { font-family: var(--serif); font-weight: 400; font-size: 22px; font-variant-numeric: tabular-nums; }
+  .totales span { font-size: 11px; color: var(--sec); }
+</style>
+
+<main>
+  <header class="card" id="cab"></header>
+
+  <section class="card grafica">
+    <h2>peso frente a la banda objetivo (0,45–0,70 kg/semana · septiembre, 4 semanas)</h2>
+    <div class="wrap"><div id="chart"></div></div>
+    <div class="leyenda"><span class="b">dentro de la banda vas bien</span><span class="p">peso en ayunas</span></div>
+  </section>
+
+  <section class="cifras" id="cifras"></section>
+
+  <section class="card lista">
+    <h2>registro de días</h2>
+    <div id="dias"></div>
+  </section>
+
+  <section class="card plan">
+    <h2>plan semanal</h2>
+    <p class="intro">todo pesado en crudo, patata incluida: da igual que la hagas al micro, hervida o al horno. aceite en spray para carne y huevos, no se cuenta. sala la comida con normalidad: el objetivo son ~5 g de sal al día, no cero.</p>
+    <div id="planDias"></div>
+  </section>
+
+  <section class="card compra">
+    <h2>lista de la compra semanal</h2>
+    <p class="intro">cantidades para una semana de plan, salvo donde ponga otra cosa. el número bajo cada producto es el código de barras, para confirmar en tienda que es exactamente ese. marca lo que ya tengas.</p>
+    <p class="contador" id="contador"></p>
+    <div id="compraGrupos"></div>
+    <div class="totales" id="totales"></div>
+    <div class="avisos">
+      tres fichas que conviene comprobar en la etiqueta:
+      <ul>
+        <li>la pechuga de pollo no tiene lista de ingredientes cargada. comprueba que no lleve agua ni sal añadidas.</li>
+        <li>el aceite en spray comparte código de barras con la botella normal.</li>
+        <li>el tomate cherry se vende suelto y no tiene ficha.</li>
+        <li>los palitos de zanahoria pueden llevar antioxidante y aromas. si la lista de ingredientes dice algo más que zanahoria, coge la zanahoria baby en bolsa.</li>
+        <li>los precios son de agregadores de terceros, no de mercadona, y varían por provincia. tómalos como orientación, no como el ticket.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+const fmt = (n, d = 1) => n.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt0 = n => n.toLocaleString('es-ES', { maximumFractionDigits: 0 });
+const fecha = iso => { const d = new Date(iso + 'T00:00'); return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }); };
+const dias = (a, b) => (new Date(b + 'T00:00') - new Date(a + 'T00:00')) / 864e5;
+
+const conPeso = DIAS.filter(d => d.peso != null);
+const ultimo = conPeso[conPeso.length - 1];
+const cerrados = DIAS.filter(d => d.kcal != null && !d.parcial);
+
+// ─── cabecera ───
+{
+  const c = document.getElementById('cab');
+  const dif = ultimo ? ultimo.peso - INICIO.peso : 0;
+  const semanas = ultimo ? dias(INICIO.fecha, ultimo.fecha) / 7 : 0;
+  let ritmo;
+  if (conPeso.length < 5) ritmo = `ritmo real: pendiente, hacen falta al menos 5 pesajes para que la cifra diga algo`;
+  else {
+    // pendiente de regresión lineal sobre todos los pesajes, en kg/semana
+    const xs = conPeso.map(d => dias(INICIO.fecha, d.fecha)), ys = conPeso.map(d => d.peso);
+    const mx = xs.reduce((a, b) => a + b) / xs.length, my = ys.reduce((a, b) => a + b) / ys.length;
+    const m = xs.reduce((s, x, i) => s + (x - mx) * (ys[i] - my), 0) / xs.reduce((s, x) => s + (x - mx) ** 2, 0);
+    const r = -m * 7;
+    const cls = r >= OBJETIVO.ritmoMin && r <= OBJETIVO.ritmoMax ? 'ok' : r > 0.9 ? 'mal' : 'pend';
+    ritmo = `ritmo real: <b class="num ${cls}">${fmt(r, 2)} kg/semana</b> (tendencia sobre ${conPeso.length} pesajes)`;
+  }
+  c.innerHTML = `
+    <div class="fecha">${ultimo ? fecha(ultimo.fecha) : 'sin pesajes'} · en ayunas</div>
+    <div class="peso num">${ultimo ? fmt(ultimo.peso) : '—'}<small>kg</small></div>
+    <div class="fila">
+      <div class="dif num">${dif <= 0 ? '−' : '+'}${fmt(Math.abs(dif))} kg <span class="sec small">desde ${fmt(INICIO.peso)} el ${fecha(INICIO.fecha).replace(/^\w+, /, '')}</span></div>
+    </div>
+    <div class="ritmo">${ritmo}</div>`;
+}
+
+// ─── gráfica ───
+{
+  const W = 640, H = 300, L = 40, R = 14, T = 14, B = 30;
+  const semTot = OBJETIVO.semanas;
+  // el eje y se ajusta a los datos reales en vez de reservar todo el rango del objetivo
+  const pesos = conPeso.map(d => d.peso).concat(INICIO.peso);
+  const yMax = Math.max(...pesos) + 0.4;
+  const yMin = Math.min(INICIO.peso - OBJETIVO.ritmoMax * semTot, ...pesos) - 0.4;
+  const paso = (yMax - yMin) <= 5 ? 0.5 : 1;
+  const x = s => L + (s / semTot) * (W - L - R);
+  const y = k => T + (yMax - k) / (yMax - yMin) * (H - T - B);
+  const el = document.getElementById('chart');
+  const cv = document.createElement('canvas');
+  cv.setAttribute('role', 'img');
+  cv.setAttribute('aria-label', 'peso frente a banda objetivo');
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = H * dpr;
+  el.innerHTML = '';
+  el.appendChild(cv);
+  const c = cv.getContext('2d');
+  c.scale(dpr, dpr);
+  const linea = (x1, y1, x2, y2, color, ancho, guiones) => {
+    c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2);
+    c.strokeStyle = color; c.lineWidth = ancho; c.setLineDash(guiones || []); c.stroke();
+  };
+  // banda
+  const yA = y(INICIO.peso - OBJETIVO.ritmoMin * semTot), yB = y(INICIO.peso - OBJETIVO.ritmoMax * semTot);
+  c.beginPath(); c.moveTo(x(0), y(INICIO.peso)); c.lineTo(x(semTot), yA); c.lineTo(x(semTot), yB); c.closePath();
+  c.fillStyle = 'rgba(74,107,60,.14)'; c.fill();
+  linea(x(0), y(INICIO.peso), x(semTot), yA, '#4A6B3C', 1, [3, 3]);
+  linea(x(0), y(INICIO.peso), x(semTot), yB, '#4A6B3C', 1, [3, 3]);
+  c.font = '11px ' + getComputedStyle(document.documentElement).getPropertyValue('--sans');
+  c.fillStyle = '#6C7369';
+  // rejilla y
+  c.textAlign = 'right';
+  for (let n = Math.ceil(yMin / paso); n * paso <= yMax; n++) {
+    const k = n * paso;
+    linea(L, y(k), W - R, y(k), '#D0D5C8', 1);
+    c.fillText(paso < 1 ? fmt(k, 1) : k, L - 6, y(k) + 4);
+  }
+  // eje x semanas
+  c.textAlign = 'center';
+  for (let w = 0; w <= semTot; w++) {
+    linea(x(w), H - B, x(w), H - B + 4, '#D0D5C8', 1);
+    c.fillText(w === 0 ? 'sem 0' : w, x(w), H - B + 16);
+  }
+  linea(L, H - B, W - R, H - B, '#D0D5C8', 1);
+  // línea de peso
+  const pts = conPeso.map(d => ({ d, px: x(dias(INICIO.fecha, d.fecha) / 7), py: y(d.peso) }));
+  c.setLineDash([]);
+  if (pts.length > 1) {
+    c.beginPath();
+    pts.forEach((p, i) => i ? c.lineTo(p.px, p.py) : c.moveTo(p.px, p.py));
+    c.strokeStyle = '#2C4A6E'; c.lineWidth = 2; c.lineJoin = 'round'; c.stroke();
+  }
+  pts.forEach(p => {
+    c.beginPath(); c.arc(p.px, p.py, 4.5, 0, Math.PI * 2);
+    c.fillStyle = '#2C4A6E'; c.fill();
+    c.strokeStyle = '#FBFCF8'; c.lineWidth = 2; c.stroke();
+  });
+  const wrap = el.parentElement;
+  const quitar = () => { const t = document.getElementById('tip'); if (t) t.remove(); };
+  cv.addEventListener('mousemove', e => {
+    const r = cv.getBoundingClientRect();
+    const mx = (e.clientX - r.left) / r.width * W, my = (e.clientY - r.top) / r.height * H;
+    const p = pts.find(p => Math.hypot(p.px - mx, p.py - my) <= 14);
+    if (!p) return quitar();
+    let t = document.getElementById('tip');
+    if (!t) { t = document.createElement('div'); t.id = 'tip'; wrap.appendChild(t); }
+    t.textContent = `${fecha(p.d.fecha)} · ${fmt(p.d.peso)} kg`;
+    t.style.left = (p.px / W * r.width) + 'px';
+    t.style.top = (p.py / H * r.height) + 'px';
+  });
+  cv.addEventListener('mouseleave', quitar);
+}
+
+// ─── tres cifras ───
+{
+  const ult7 = cerrados.slice(-7);
+  const media = k => ult7.length ? ult7.reduce((s, d) => s + d[k], 0) / ult7.length : null;
+  const mk = media('kcal'), mp = media('prot');
+  const clsK = mk == null ? 'pend' : (mk >= OBJETIVO.kcalMin - 50 && mk <= OBJETIVO.kcalMax + 50) ? 'ok' : 'mal';
+  const clsP = mp == null ? 'pend' : mp >= OBJETIVO.prot - 5 ? 'ok' : 'mal';
+  document.getElementById('cifras').innerHTML = `
+    <div class="card"><div class="v ${clsK}">${mk == null ? '—' : fmt0(mk)}<small>kcal</small></div><div class="l">media ${ult7.length} día${ult7.length === 1 ? '' : 's'} cerrados</div></div>
+    <div class="card"><div class="v ${clsP}">${mp == null ? '—' : fmt0(mp)}<small>g</small></div><div class="l">proteína media</div></div>
+    <div class="card"><div class="v">${DIAS.length}</div><div class="l">día${DIAS.length === 1 ? '' : 's'} registrados</div></div>`;
+}
+
+// ─── lista ───
+{
+  const clsKcal = d => d.parcial ? 'pend' : (d.kcal >= OBJETIVO.kcalMin - 50 && d.kcal <= OBJETIVO.kcalMax + 50) ? 'ok' : 'mal';
+  const clsProt = d => d.parcial ? 'pend' : d.prot >= OBJETIVO.prot - 5 ? 'ok' : 'mal';
+  const clsGrasa = d => d.parcial ? 'pend' : d.grasa >= OBJETIVO.grasaMin - 5 ? '' : 'mal';
+  document.getElementById('dias').innerHTML = [...DIAS].reverse().map(d => `
+    <article class="dia">
+      <div class="n">${d.n}</div>
+      <div>
+        <div class="top">
+          <span class="f">${fecha(d.fecha)}${d.parcial ? '<span class="pill pend">en curso</span>' : ''}${d.estimado ? '<span class="pill sec">estimado</span>' : ''}</span>
+          <span class="pk">${d.peso != null ? fmt(d.peso) + ' kg' : '<span class="pend small">sin peso</span>'}</span>
+        </div>
+        <div class="macros">
+          ${d.kcal == null ? '<span class="pend">comida sin registrar</span>' : `
+          <div class="m"><b class="${clsKcal(d)}">${fmt0(d.kcal)}</b><span>kcal</span></div>
+          <div class="m"><b class="${clsProt(d)}">${d.prot}</b><span>proteína</span></div>
+          <div class="m"><b>${d.carbo}</b><span>carbo</span></div>
+          <div class="m"><b class="${clsGrasa(d)}">${d.grasa}</b><span>grasa</span></div>
+          ${d.sal != null ? `<div class="m"><b class="${d.sal > 6 ? 'mal' : ''}">${fmt(d.sal, 1)}</b><span>sal g</span></div>` : ''}`}
+        </div>
+        ${d.entreno ? `<div class="ent">${d.entreno}</div>` : ''}
+        ${d.nota ? `<div class="nota">${d.nota}</div>` : ''}
+        ${d.pendiente ? `<div class="falta">falta: ${d.pendiente}</div>` : ''}
+      </div>
+    </article>`).join('');
+}
+
+// ─── plan semanal ───
+{
+  document.getElementById('planDias').innerHTML = PLAN.map(d => `
+    <article class="dplan">
+      <div class="cab">
+        <span class="nom">${d.dia}</span>
+        <span class="ent">${d.entreno}</span>
+      </div>
+      <table>
+        ${d.comidas.map(([et, txt, k]) => `<tr><td class="et">${et}</td><td>${txt}</td><td class="k">${fmt0(k)}</td></tr>`).join('')}
+      </table>
+      <div class="tot">
+        <div class="m"><b>${fmt0(d.total.kcal)}</b><span>kcal</span></div>
+        <div class="m"><b>${d.total.prot}</b><span>proteína</span></div>
+        <div class="m"><b>${d.total.carbo}</b><span>carbo</span></div>
+        <div class="m"><b>${d.total.grasa}</b><span>grasa</span></div>
+        <div class="m"><b>${d.total.fibra}</b><span>fibra</span></div>
+      </div>
+    </article>`).join('');
+}
+
+// ─── lista de la compra ───
+{
+  const CLAVE = 'compra-marcados';
+  const TOTAL = COMPRA.reduce((n, g) => n + g.items.length, 0);
+  let marcados = {};
+
+  try { marcados = JSON.parse(localStorage.getItem(CLAVE) || '{}') || {}; } catch (e) { marcados = {}; }
+
+  const cont = document.getElementById('compraGrupos');
+  const contador = document.getElementById('contador');
+
+  function pintar() {
+    cont.innerHTML = COMPRA.map(g => `
+      <section class="grupo">
+        <h3>${g.grupo}</h3>
+        <ul>
+          ${g.items.map(it => `
+            <li class="${marcados[it.id] ? 'tengo' : ''}" data-id="${it.id}">
+              <input type="checkbox" data-id="${it.id}" ${marcados[it.id] ? 'checked' : ''} aria-label="ya tengo ${it.nom}">
+              <span class="txt">${it.url ? `<a href="${it.url}" target="_blank" rel="noopener">${it.nom}</a>` : it.nom}${it.ean ? `<span class="ean">${it.ean}</span>` : ''}</span>
+              <span class="der"><span class="cant">${it.cant}</span>${it.eur ? `<span class="eur">${it.eur.toFixed(2).replace('.', ',')} €</span>` : ''}</span>
+            </li>`).join('')}
+        </ul>
+      </section>`).join('');
+    actualizarContador();
+  }
+
+  function actualizarContador() {
+    const tengo = Object.values(marcados).filter(Boolean).length;
+    const faltan = TOTAL - tengo;
+    contador.innerHTML = faltan === 0
+      ? 'lo tienes todo.'
+      : `te faltan <b>${faltan}</b> de ${TOTAL} productos.`;
+  }
+
+  cont.addEventListener('change', e => {
+    const cb = e.target.closest('input[type="checkbox"]');
+    if (!cb) return;
+    const id = cb.dataset.id;
+    if (cb.checked) marcados[id] = true; else delete marcados[id];
+    cb.closest('li').classList.toggle('tengo', cb.checked);
+    actualizarContador();
+    try { localStorage.setItem(CLAVE, JSON.stringify(marcados)); } catch (e) {}
+  });
+
+  const EUR_SEMANA = COMPRA.reduce((t, g) => t + g.items.reduce((n, it) => n + (it.eur || 0), 0), 0);
+  document.getElementById('totales').innerHTML = `
+    <div class="m"><b>${EUR_SEMANA.toFixed(2).replace('.', ',')} €</b><span>la compra de la semana</span></div>
+    <div class="m"><b>${(EUR_SEMANA / 7).toFixed(2).replace('.', ',')} €</b><span>al día en comida de casa</span></div>
+    <div class="m"><b>${((EUR_SEMANA + 12) / 7).toFixed(2).replace('.', ',')} €</b><span>al día contando la tostada del bar, 4 días</span></div>`;
+
+  pintar();
+}
+</script>
